@@ -12,12 +12,12 @@ def play():
 
         number_to_guess = randint(0, 100)
         int_attempt = 0
-        suggested_number = -1
+        suggested_number = None
 
         while suggested_number != number_to_guess:
             suggested_number = input("Your suggested number: ")
 
-            if suggested_number == "q":
+            if suggested_number == "q" or " ":
                 break
             elif int(suggested_number) == number_to_guess:
                 print("You guessed the number!")
@@ -30,7 +30,7 @@ def play():
                     print("The number I remembered is smaller")
                 int_attempt += 1
 
-        if suggested_number == "q":
+        if suggested_number == "q" or " ":
             print("Game was stopped!\n")
             break
         else:
