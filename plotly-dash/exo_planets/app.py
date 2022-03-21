@@ -25,6 +25,24 @@ df = df[df["PER"] > 0]
 # является лишним
 # fig = px.scatter(df, x="TPLANET", y="A")
 
+# создание категория по размеру звезды
+# 0.8 - планеты по размеру до 80% от размеров солнца - маленькие звезды/планеты
+# 1.2 - планеты по размеру до 120% от размеров солнца - сопоставимые звезды/планеты
+# 0.8 - планеты по размеру до 10000% от размеров солнца - большие звезды/планеты
+bins = [0, 0.8, 1.2, 100]
+
+# декларация имен для вышеперечисленных данных
+names = ["small", "similar", "bigger"]
+
+# создание колонки StarSize, которая содержит в себе разбитую колонку RSTAR на "small", "similar", "bigger"
+df["StarSize"] = pd.cut(df["RSTAR"], bins, labels=names)
+
+# создание опий выбора для дропдаун меню
+options = []
+for s in names:
+    options.append({"label": s, "value": s})
+
+
 # слайдер
 rplanet_selector = dcc.RangeSlider(
     # название слайдера
@@ -40,6 +58,15 @@ rplanet_selector = dcc.RangeSlider(
     value=[5, 50]
 )
 
+# дроп даун меню
+star_size_selector = dcc.Dropdown(
+    id="star-size-dropdown",
+    options=options,
+    value=["small", "similar"],
+    multi=True
+)
+
+
 # инициализация программы
 app = dash.Dash(__name__)
 
@@ -51,11 +78,17 @@ app.layout = html.Div([
     html.Div("Select planet main semi-axis range"),
     html.Div(rplanet_selector, style={"width": "500px", "margin-left": "auto", "margin-right": "auto",
                                       "margin-top": "10px", "margin-bottom": "20px"}),
+
+    html.Div("Select Star size"),
+    html.Div(star_size_selector, style={"width": "300px", "margin-left": "auto", "margin-right": "auto",
+                                      "margin-top": "10px", "margin-bottom": "20px"}),
+
     html.Div("Planet Temperature ~ Distance to the Star"),
     # просто вывести график
     # dcc.Graph(figure=fig)
     # чтобы график был responsive
-    dcc.Graph(id="responsive-graph", figure=fig)
+    # dcc.Graph(id="responsive-graph", figure=fig) - внесенные изменения из-за того, что график декларируется в callback
+    dcc.Graph(id="responsive-graph")
 ],
     style={"margin-left": "80px",
            "margin-right": "80px",
@@ -70,17 +103,20 @@ app.layout = html.Div([
     # первый параметр - это куда мы будем передавать данные, а второй параметр это форма показа(форма сущности, тип сущности)
     Output(component_id="responsive-graph", component_property="figure"),
     # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
-    Input(component_id="range-slider", component_property="value")
+    [Input(component_id="range-slider", component_property="value"),
+     Input(component_id="star-size-dropdown", component_property="value")]
 )
 
 # value передается и мы называем это radius_range
 # функция для обновления графика
-def update_graph(radius_range):
+def update_graph(radius_range, star_size):
     # данные для графика
     graph_data = df[(df["RPLANET"] > radius_range[0]) &
-                    (df["RPLANET"] < radius_range[1])
+                    (df["RPLANET"] < radius_range[1]) &
+                    (df["StarSize"].isin(star_size))
                     ]
-    fig = px.scatter(graph_data, x="TPLANET",  y="A")
+    # создание графика
+    fig = px.scatter(graph_data, x="TPLANET",  y="A", color="StarSize")
 
     return fig
 
