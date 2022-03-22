@@ -1,8 +1,11 @@
 import dash
+import numpy as np
 from dash import dcc
 from dash import html
 
 import dash_bootstrap_components as dbc
+
+import numpy as np
 
 # чтобы график мог реагировать на действия
 from dash.dependencies import Input, Output
@@ -44,6 +47,35 @@ options = []
 for s in names:
     options.append({"label": s, "value": s})
 
+# Декларация требований для поиска пригодной для жизни планеты
+# Температура
+tp_bins = [0, 200, 400, 500, 5000]
+tp_labels = ["low", "optimal", "high", "extreme"]
+df["Temp"] = pd.cut(df["TPLANET"], tp_bins, labels=tp_labels)
+
+# Размер и гравитация
+rp_bins = [0, 0.5, 2, 4, 100]
+rp_labels = ["low", "optimal", "high", "extreme"]
+df["Gravity"] = pd.cut(df["RPLANET"], rp_bins, labels=rp_labels)
+
+# задать статус объекта
+# np.where((condition), исход если true, исход если else)
+df["status"] = np.where((df["Temp"] == "optimal") & (df["Gravity"] == "optimal"), "promising", np.NaN)
+
+# loc отвечает за извлечение данных. на месте : может быть лист с индексами или значениями. В данном случае мы извлекаем
+# диапазон строк
+df.loc[:, "status"] = np.where((df["Temp"] == "optimal") & (df["Gravity"].isin(["low", "high"])),
+                               "challenging", df["status"])
+df.loc[:, "status"] = np.where((df["Temp"].isin(["low", "high"])) &
+                               (df["Gravity"] == "optimal"),
+                               "challenging", df["status"])
+# запоолняет значения NaN в df на "extreme"
+df["status"] = df.status.fillna("extreme")
+
+# вывод в консоль
+# print(df.groupby("status")["ROW"].count())
+
+
 
 # слайдер
 rplanet_selector = dcc.RangeSlider(
@@ -57,17 +89,16 @@ rplanet_selector = dcc.RangeSlider(
     marks={5: "5", 10: "10", 25: "25", 50: "50"},
     step=1,
     # дефольтные значения
-    value=[5, 50]
+    value=[min(df["RPLANET"]), max(df["RPLANET"])]
 )
 
 # дроп даун меню
 star_size_selector = dcc.Dropdown(
     id="star-size-dropdown",
     options=options,
-    value=["small", "similar"],
+    value=["small", "similar", "bigger"],
     multi=True
 )
-
 
 # инициализация программы
 app = dash.Dash(__name__,
@@ -106,17 +137,21 @@ app.layout = html.Div(
             [dbc.Col([
                 html.Div("Select planet main semi-axis range"),
                 html.Div(rplanet_selector)
-                ], width={"size": 4, "offset": 1}),
-             dbc.Col([
-                html.Div("Select Star size"),
-                html.Div(star_size_selector)
+            ], width={"size": 4, "offset": 1}),
+                dbc.Col([
+                    html.Div("Select Star size"),
+                    html.Div(star_size_selector)
                 ], width={"size": 4, "offset": 2})
-             ],  style={"margin-top": "10px", "margin-bottom": "20px"},
+            ], style={"margin-top": "10px", "margin-bottom": "20px"},
         ),
-        dbc.Row(dbc.Col([
-                html.Div("Planet Temperature ~ Distance to the Star"),
-                dcc.Graph(id="responsive-graph")
-                ]),  style={"margin-top": "20px", "margin-bottom": "10px"})
+        dbc.Row([dbc.Col([
+            html.Div("Planet Temperature ~ Distance to the Star"),
+            dcc.Graph(id="responsive-graph")
+        ], width={"size": 6, "offset": 0}),
+            dbc.Col([
+                html.Div("Position on the Celestial Sphere"),
+                dcc.Graph(id="celestial-graph")
+            ])], style={"margin-top": "20px", "margin-bottom": "10px"})
 
     ], style={"margin-left": "80px",
               "margin-right": "80px",
@@ -125,16 +160,16 @@ app.layout = html.Div(
 
 """ CALLBACKS """
 
+
 # оболочка над функцией, для динамической работы с переменными
 @app.callback(
-    # Output задает то, что будет возвращать наша функция
-    # первый параметр - это куда мы будем передавать данные, а второй параметр это форма показа(форма сущности, тип сущности)
+    # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
+    # а второй параметр это форма показа(форма сущности, тип сущности)
     Output(component_id="responsive-graph", component_property="figure"),
     # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
     [Input(component_id="range-slider", component_property="value"),
      Input(component_id="star-size-dropdown", component_property="value")]
 )
-
 # value передается и мы называем это radius_range
 # функция для обновления графика
 def update_graph(radius_range, star_size):
@@ -144,7 +179,28 @@ def update_graph(radius_range, star_size):
                     (df["StarSize"].isin(star_size))
                     ]
     # создание графика
-    fig = px.scatter(graph_data, x="TPLANET",  y="A", color="StarSize")
+    fig = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
+
+    return fig
+
+
+@app.callback(
+    # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
+    # а второй параметр это форма показа(форма сущности, тип сущности)
+    Output(component_id="celestial-graph", component_property="figure"),
+    # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
+    [Input(component_id="range-slider", component_property="value"),
+     Input(component_id="star-size-dropdown", component_property="value")]
+)
+def update_celestial_graph(radius_range, star_size):
+    # данные для графика
+    graph_data = df[(df["RPLANET"] > radius_range[0]) &
+                    (df["RPLANET"] < radius_range[1]) &
+                    (df["StarSize"].isin(star_size))
+                    ]
+    # создание графика
+    # параметр size делает из точек пузырки на графике
+    fig = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
 
     return fig
 
@@ -154,10 +210,7 @@ if __name__ == "__main__":
     # запуск сервера в тестовом режиме
     app.run_server(debug=True)
 
-
-
-
-#главная полуось планеты, они движуться по элиптической оси и эти данные говорят нам о том насколько далео в среднем
+# главная полуось планеты, они движуться по элиптической оси и эти данные говорят нам о том насколько далео в среднем
 # эта планета находится от своей звезды и мы строим зависимость меджу расстоянием и температурой
 # x это температура, а y это расстояние
 # задание добавить фильтр на основе радиуса планеты
