@@ -185,10 +185,30 @@ app.layout = html.Div(
 #     fig = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
 #
 #     return fig
+# @app.callback(
+#     # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
+#     # а второй параметр это форма показа(форма сущности, тип сущности)
+#     Output(component_id="celestial-graph", component_property="figure"),
+#     # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
+#     [Input(component_id="range-slider", component_property="value"),
+#      Input(component_id="star-size-dropdown", component_property="value")]
+# )
+# def update_celestial_graph(radius_range, star_size):
+#     # данные для графика
+#     graph_data = df[(df["RPLANET"] > radius_range[0]) &
+#                     (df["RPLANET"] < radius_range[1]) &
+#                     (df["StarSize"].isin(star_size))
+#                     ]
+#     # создание графика
+#     # параметр size делает из точек пузырки на графике
+#     fig = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
+#
+#     return fig
 
 
 @app.callback(
     Output(component_id="responsive-graph", component_property="figure"),
+    Output(component_id="celestial-graph", component_property="figure"),
     [Input(component_id="btn-submit", component_property="n_clicks")],
     [State(component_id="range-slider", component_property="value"),
      State(component_id="star-size-dropdown", component_property="value")]
@@ -200,28 +220,11 @@ def update_graph(n, radius_range, star_size):
                     ]
     fig1 = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
 
-    return fig1
+    fig2 = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
+
+    return fig1, fig2
 
 
-@app.callback(
-    # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
-    # а второй параметр это форма показа(форма сущности, тип сущности)
-    Output(component_id="celestial-graph", component_property="figure"),
-    # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
-    [Input(component_id="range-slider", component_property="value"),
-     Input(component_id="star-size-dropdown", component_property="value")]
-)
-def update_celestial_graph(radius_range, star_size):
-    # данные для графика
-    graph_data = df[(df["RPLANET"] > radius_range[0]) &
-                    (df["RPLANET"] < radius_range[1]) &
-                    (df["StarSize"].isin(star_size))
-                    ]
-    # создание графика
-    # параметр size делает из точек пузырки на графике
-    fig = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
-
-    return fig
 # запуск программы
 if __name__ == "__main__":
     # запуск сервера в тестовом режиме
