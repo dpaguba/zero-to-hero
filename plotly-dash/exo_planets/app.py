@@ -1,14 +1,15 @@
 import dash
-import numpy as np
 from dash import dcc
 from dash import html
 
 import dash_bootstrap_components as dbc
-
 import numpy as np
 
 # чтобы график мог реагировать на действия
-from dash.dependencies import Input, Output
+# Каждый раз когда меняется значение в инпуте в компонент айди, то вызывается полностью целый колбек,
+# а если мы передаем параметры инпута через стейт, то ничего не тригерится и не вызывается колбек, а мы
+# можем их применить, когда нажмем на кнопку - триггер
+from dash.dependencies import Input, Output, State
 # библиотека pandas нужна для того чтобы данные с запроса превратить в dataframe
 import pandas as pd
 # библиотека для постройки графиков
@@ -60,7 +61,7 @@ df["Gravity"] = pd.cut(df["RPLANET"], rp_bins, labels=rp_labels)
 
 # задать статус объекта
 # np.where((condition), исход если true, исход если else)
-df["status"] = np.where((df["Temp"] == "optimal") & (df["Gravity"] == "optimal"), "promising", np.NaN)
+df["status"] = np.where((df["Temp"] == "optimal") & (df["Gravity"] == "optimal"), "promising", None)
 
 # loc отвечает за извлечение данных. на месте : может быть лист с индексами или значениями. В данном случае мы извлекаем
 # диапазон строк
@@ -137,12 +138,14 @@ app.layout = html.Div(
             [dbc.Col([
                 html.Div("Select planet main semi-axis range"),
                 html.Div(rplanet_selector)
-            ], width={"size": 4, "offset": 1}),
+            ], width={"size": 3, "offset": 0}),
                 dbc.Col([
                     html.Div("Select Star size"),
                     html.Div(star_size_selector)
-                ], width={"size": 4, "offset": 2})
-            ], style={"margin-top": "10px", "margin-bottom": "20px"},
+                ], width={"size": 3, "offset": 1}),
+                dbc.Col(dbc.Button("Apply", id="btn-submit", color="success", className='me-1', n_clicks=0))
+            ],
+            style={"margin-top": "10px", "margin-bottom": "20px", }
         ),
         dbc.Row([dbc.Col([
             html.Div("Planet Temperature ~ Distance to the Star"),
@@ -162,26 +165,42 @@ app.layout = html.Div(
 
 
 # оболочка над функцией, для динамической работы с переменными
-@app.callback(
-    # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
-    # а второй параметр это форма показа(форма сущности, тип сущности)
-    Output(component_id="responsive-graph", component_property="figure"),
-    # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
-    [Input(component_id="range-slider", component_property="value"),
-     Input(component_id="star-size-dropdown", component_property="value")]
-)
+# @app.callback(
+#     # Output задает то, что будет возвращать наша функция первый параметр - это куда мы будем передавать данные,
+#     # а второй параметр это форма показа(форма сущности, тип сущности)
+#     Output(component_id="responsive-graph", component_property="figure"),
+#     # первый параметр - откуда мы берем данные, второй параметр говорит конкретно, что мы будем передавать
+#     [Input(component_id="range-slider", component_property="value"),
+#      Input(component_id="star-size-dropdown", component_property="value")]
+# )
 # value передается и мы называем это radius_range
 # функция для обновления графика
-def update_graph(radius_range, star_size):
-    # данные для графика
+# def update_graph(radius_range, star_size):
+#     # данные для графика
+#     graph_data = df[(df["RPLANET"] > radius_range[0]) &
+#                     (df["RPLANET"] < radius_range[1]) &
+#                     (df["StarSize"].isin(star_size))
+#                     ]
+#     # создание графика
+#     fig = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
+#
+#     return fig
+
+
+@app.callback(
+    Output(component_id="responsive-graph", component_property="figure"),
+    [Input(component_id="btn-submit", component_property="n_clicks")],
+    [State(component_id="range-slider", component_property="value"),
+     State(component_id="star-size-dropdown", component_property="value")]
+)
+def update_graph(n, radius_range, star_size):
     graph_data = df[(df["RPLANET"] > radius_range[0]) &
                     (df["RPLANET"] < radius_range[1]) &
                     (df["StarSize"].isin(star_size))
                     ]
-    # создание графика
-    fig = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
+    fig1 = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
 
-    return fig
+    return fig1
 
 
 @app.callback(
@@ -203,14 +222,8 @@ def update_celestial_graph(radius_range, star_size):
     fig = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
 
     return fig
-
-
 # запуск программы
 if __name__ == "__main__":
     # запуск сервера в тестовом режиме
     app.run_server(debug=True)
 
-# главная полуось планеты, они движуться по элиптической оси и эти данные говорят нам о том насколько далео в среднем
-# эта планета находится от своей звезды и мы строим зависимость меджу расстоянием и температурой
-# x это температура, а y это расстояние
-# задание добавить фильтр на основе радиуса планеты
