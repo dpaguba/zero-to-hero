@@ -77,7 +77,6 @@ df["status"] = df.status.fillna("extreme")
 # print(df.groupby("status")["ROW"].count())
 
 
-
 # слайдер
 rplanet_selector = dcc.RangeSlider(
     # название слайдера
@@ -133,7 +132,8 @@ app = dash.Dash(__name__,
 
 app.layout = html.Div(
     [
-        dbc.Row(html.H1("Kepler Project"), style={"margin-top": "10px", "margin-bottom": "20px"}),
+        dbc.Row(dbc.Col(html.H1("Kepler Project"),
+                        style={"text-align": "center", "margin-top": "10px", "margin-bottom": "20px"})),
         dbc.Row(
             [dbc.Col([
                 html.Div("Select planet main semi-axis range"),
@@ -145,16 +145,13 @@ app.layout = html.Div(
                 ], width={"size": 3, "offset": 1}),
                 dbc.Col(dbc.Button("Apply", id="btn-submit", color="success", className='me-1', n_clicks=0))
             ],
-            style={"margin-top": "10px", "margin-bottom": "20px", }
+            style={"margin-top": "10px", "margin-bottom": "20px"}
         ),
-        dbc.Row([dbc.Col([
-            html.Div("Planet Temperature ~ Distance to the Star"),
-            dcc.Graph(id="responsive-graph")
-        ], width={"size": 6, "offset": 0}),
-            dbc.Col([
-                html.Div("Position on the Celestial Sphere"),
-                dcc.Graph(id="celestial-graph")
-            ])], style={"margin-top": "20px", "margin-bottom": "10px"})
+        dbc.Row([dbc.Col([html.Div(id="responsive-graph")],
+                         width={"size": 6, "offset": 0}),
+                 dbc.Col([html.Div(id="celestial-graph")]
+                         )],
+                style={"margin-top": "20px", "margin-bottom": "10px"})
 
     ], style={"margin-left": "80px",
               "margin-right": "80px",
@@ -206,9 +203,12 @@ app.layout = html.Div(
 #     return fig
 
 
+# чтобы програма не крашилась, если ни одного параметра из фильтров не будет выбрано, переделываем вывод программы
+# раньше мы возвращали figure, а теперь html.Div - это children. После этого мы добавляем проверку
+# на отсутствие выбранных данных, если она успешна, то выводом будет сообщение, если же нет, то графики
 @app.callback(
-    Output(component_id="responsive-graph", component_property="figure"),
-    Output(component_id="celestial-graph", component_property="figure"),
+    Output(component_id="responsive-graph", component_property="children"),
+    Output(component_id="celestial-graph", component_property="children"),
     [Input(component_id="btn-submit", component_property="n_clicks")],
     [State(component_id="range-slider", component_property="value"),
      State(component_id="star-size-dropdown", component_property="value")]
@@ -218,15 +218,21 @@ def update_graph(n, radius_range, star_size):
                     (df["RPLANET"] < radius_range[1]) &
                     (df["StarSize"].isin(star_size))
                     ]
+
+    if len(graph_data) == 0:
+        return html.Div("Please select more data!",
+                        style={"font-size": "250%", "margin-top": "40px"}), html.Div()
+
     fig1 = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
+    html1 = [html.Div("Planet Temperature ~ Distance to the Star"), dcc.Graph(figure=fig1)]
 
     fig2 = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
+    html2 = [html.Div("Position on the Celestial Sphere"), dcc.Graph(figure=fig2)]
 
-    return fig1, fig2
+    return html1, html2
 
 
 # запуск программы
 if __name__ == "__main__":
     # запуск сервера в тестовом режиме
     app.run_server(debug=True)
-
