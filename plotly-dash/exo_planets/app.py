@@ -2,6 +2,8 @@ import dash
 from dash import dcc
 from dash import html
 
+import dash_bootstrap_components as dbc
+
 # чтобы график мог реагировать на действия
 from dash.dependencies import Input, Output
 # библиотека pandas нужна для того чтобы данные с запроса превратить в dataframe
@@ -68,32 +70,58 @@ star_size_selector = dcc.Dropdown(
 
 
 # инициализация программы
-app = dash.Dash(__name__)
+app = dash.Dash(__name__,
+                # подключение бутстрепа
+                external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 """ LAYOUT """
 
+# Cтарый layout
 # внешний вид приложения. Тут использую dcc html
-app.layout = html.Div([
-    html.H1("Kepler Project"),
-    html.Div("Select planet main semi-axis range"),
-    html.Div(rplanet_selector, style={"width": "500px", "margin-left": "auto", "margin-right": "auto",
-                                      "margin-top": "10px", "margin-bottom": "20px"}),
+# app.layout = html.Div([
+#     html.H1("Kepler Project"),
+#     html.Div("Select planet main semi-axis range"),
+#     html.Div(rplanet_selector, style={"width": "500px", "margin-left": "auto", "margin-right": "auto",
+#                                       "margin-top": "10px", "margin-bottom": "20px"}),
+#
+#     html.Div("Select Star size"),
+#     html.Div(star_size_selector, style={"width": "300px", "margin-left": "auto", "margin-right": "auto",
+#                                       "margin-top": "10px", "margin-bottom": "20px"}),
+#
+#     html.Div("Planet Temperature ~ Distance to the Star"),
+#     # просто вывести график
+#     # dcc.Graph(figure=fig)
+#     # чтобы график был responsive
+#     # dcc.Graph(id="responsive-graph", figure=fig) - внесенные изменения из-за того, что график декларируется в callback
+#     dcc.Graph(id="responsive-graph")
+# ],
+#     style={"margin-left": "80px",
+#            "margin-right": "80px",
+#            "text-align": "center"})
 
-    html.Div("Select Star size"),
-    html.Div(star_size_selector, style={"width": "300px", "margin-left": "auto", "margin-right": "auto",
-                                      "margin-top": "10px", "margin-bottom": "20px"}),
+app.layout = html.Div(
+    [
+        dbc.Row(html.H1("Kepler Project"), style={"margin-top": "10px", "margin-bottom": "20px"}),
+        dbc.Row(
+            [dbc.Col([
+                html.Div("Select planet main semi-axis range"),
+                html.Div(rplanet_selector)
+                ], width={"size": 4, "offset": 1}),
+             dbc.Col([
+                html.Div("Select Star size"),
+                html.Div(star_size_selector)
+                ], width={"size": 4, "offset": 2})
+             ],  style={"margin-top": "10px", "margin-bottom": "20px"},
+        ),
+        dbc.Row(dbc.Col([
+                html.Div("Planet Temperature ~ Distance to the Star"),
+                dcc.Graph(id="responsive-graph")
+                ]),  style={"margin-top": "20px", "margin-bottom": "10px"})
 
-    html.Div("Planet Temperature ~ Distance to the Star"),
-    # просто вывести график
-    # dcc.Graph(figure=fig)
-    # чтобы график был responsive
-    # dcc.Graph(id="responsive-graph", figure=fig) - внесенные изменения из-за того, что график декларируется в callback
-    dcc.Graph(id="responsive-graph")
-],
-    style={"margin-left": "80px",
-           "margin-right": "80px",
-           "text-align": "center"})
-
+    ], style={"margin-left": "80px",
+              "margin-right": "80px",
+              "text-align": "center"}
+)
 
 """ CALLBACKS """
 
