@@ -3,6 +3,7 @@ from dash import dcc
 from dash import html
 
 import dash_bootstrap_components as dbc
+from dash import dash_table
 import numpy as np
 
 # чтобы график мог реагировать на действия
@@ -21,6 +22,8 @@ df = pd.read_csv("asterank_exo.csv")
 # добавлен фильтр по данным PER, которые отвечают за показатель направления вращения планеты
 # отфильтровано так, чтобы были показаны планеты крутящиеся по часовой стрелке, а не против нее
 df = df[df["PER"] > 0]
+# данные с колонки коi будут показаны как инт значение
+df["KOI"] = df["KOI"].astype(int, errors="ignore")
 
 # создание колонки StarSize, которая содержит в себе разбитую колонку RSTAR на "small", "similar", "bigger"
 bins = [0, 0.8, 1.2, 100]
@@ -99,6 +102,12 @@ tab1_content = [
     ])
 ]
 
+tab2_content = [
+    dbc.Row([
+        html.Div(id="data-table")
+    ])
+]
+
 # инициализация программы
 app = dash.Dash(__name__,
                 # подключение бутстрепа
@@ -125,7 +134,7 @@ app.layout = html.Div(
         ),
         dbc.Tabs([
             dbc.Tab(tab1_content, label="Charts"),
-            dbc.Tab(html.Div("Tab 2 Content!"), label="Tab2"),
+            dbc.Tab(tab2_content, label="Data"),
             dbc.Tab(html.Div("About Page"), label="About")
         ])
     ], style={"margin-left": "80px",
@@ -140,7 +149,8 @@ app.layout = html.Div(
     [Output(component_id="responsive-graph", component_property="children"),
      Output(component_id="celestial-graph", component_property="children"),
      Output(component_id="relative-dist-graph", component_property="children"),
-     Output(component_id="mstar-tstar-graph", component_property="children")],
+     Output(component_id="mstar-tstar-graph", component_property="children"),
+     Output(component_id="data-table", component_property="children")],
     [Input(component_id="btn-submit", component_property="n_clicks")],
     [State(component_id="range-slider", component_property="value"),
      State(component_id="star-size-dropdown", component_property="value")]
@@ -172,7 +182,20 @@ def update_graph(n, radius_range, star_size):
         dcc.Graph(figure=fig4)
     ]
 
-    return html1, html2, html3, html4
+    # Raw data table
+    # удаляем добавленые колонки
+    raw_data = graph_data.drop(["Relative_dist", "StarSize", "Gravity", "status", "Temp", "ROW",], axis=1)
+    # строим таблицу, переводим данные графика в словарь и записываем данные потом в колонки таблицы
+    tbl = dash_table.DataTable(data=graph_data.to_dict("records"),
+                               columns=[{"name": i, "id": i} for i in raw_data.columns],
+                               style_data={"width": "93px", "maxWidth": "93px", "minWidth": "93px"},
+                               style_header={"textAlign": "center"},
+                               page_size=40
+                               )
+
+    html5 = [html.P("Raw Data"), tbl]
+
+    return html1, html2, html3, html4, html5
 
 
 # запуск программы
