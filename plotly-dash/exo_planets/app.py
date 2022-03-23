@@ -15,9 +15,7 @@ import pandas as pd
 # библиотека для постройки графиков
 import plotly.express as px
 
-
 """ READ DATA"""
-
 
 df = pd.read_csv("asterank_exo.csv")
 # добавлен фильтр по данным PER, которые отвечают за показатель направления вращения планеты
@@ -44,7 +42,6 @@ rp_bins = [0, 0.5, 2, 4, 100]
 rp_labels = ["low", "optimal", "high", "extreme"]
 df["Gravity"] = pd.cut(df["RPLANET"], rp_bins, labels=rp_labels)
 
-
 # задать статус объекта
 # np.where((condition), исход если true, исход если else)
 df["status"] = np.where((df["Temp"] == "optimal") & (df["Gravity"] == "optimal"), "promising", None)
@@ -58,8 +55,6 @@ df.loc[:, "status"] = np.where((df["Temp"].isin(["low", "high"])) &
                                "challenging", df["status"])
 # запоолняет значения NaN в df на "extreme"
 df["status"] = df.status.fillna("extreme")
-
-
 
 # Относительная дистанция (Дистанция к солнцу/ радиус солнца)
 df.loc[:, "Relative_dist"] = df["A"] / df["RSTAR"]
@@ -87,6 +82,23 @@ star_size_selector = dcc.Dropdown(
     multi=True
 )
 
+# Tabs content
+tab1_content = [
+    dbc.Row([
+        dbc.Col([
+            html.Div(id="responsive-graph")], md=6),
+        dbc.Col([
+            html.Div(id="celestial-graph")], md=6)], style={"margin-top": "20px", "margin-bottom": "10px"}),
+    dbc.Row([
+        dbc.Col([
+            html.Div(id="relative-dist-graph")
+        ], md=6),
+        dbc.Col([
+            html.Div(id="mstar-tstar-graph")
+        ], md=6)
+    ])
+]
+
 # инициализация программы
 app = dash.Dash(__name__,
                 # подключение бутстрепа
@@ -111,21 +123,11 @@ app.layout = html.Div(
             ],
             style={"margin-top": "10px", "margin-bottom": "20px"}
         ),
-        dbc.Row([
-            dbc.Col([
-                html.Div(id="responsive-graph")], md=6),
-            dbc.Col([
-                html.Div(id="celestial-graph")], md=6)],
-            style={"margin-top": "20px", "margin-bottom": "10px"}),
-        dbc.Row([
-            dbc.Col([
-                html.Div(id="relative-dist-graph")
-            ], md=6),
-            dbc.Col([
-                html.Div(id="mstar-tstar-graph")
-            ], md=6)
+        dbc.Tabs([
+            dbc.Tab(tab1_content, label="Charts"),
+            dbc.Tab(html.Div("Tab 2 Content!"), label="Tab2"),
+            dbc.Tab(html.Div("About Page"), label="About")
         ])
-
     ], style={"margin-left": "80px",
               "margin-right": "80px",
               "text-align": "center"}
