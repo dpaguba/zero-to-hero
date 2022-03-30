@@ -1,3 +1,5 @@
+from typing import Union, Any
+
 import dash
 from dash import dcc
 from dash import html
@@ -15,6 +17,10 @@ from dash.dependencies import Input, Output, State
 import pandas as pd
 # библиотека для постройки графиков
 import plotly.express as px
+import plotly.graph_objects as go
+from numpy import ndarray
+from pandas import Series, DataFrame
+from pandas.core.generic import NDFrame
 
 """ READ DATA"""
 
@@ -154,6 +160,19 @@ tab3_content = [
 
 ]
 
+# Global design settings
+CHARTS_TEMPLATE = go.layout.Template(
+    layout=dict(
+        font=dict(family="Century Gothic",
+                  size=14),
+        legend=dict(orientation="h",
+                    title_text="",
+                    x=0, y=1.1)
+
+    )
+)
+
+COLORS_STATUS_VALUES = ["lightgray", "#1f85de", "#22D744"]
 
 # инициализация программы
 app = dash.Dash(__name__,
@@ -203,7 +222,7 @@ app.layout = html.Div(
      State(component_id="star-size-dropdown", component_property="value")]
 )
 def update_graph(n, radius_range, star_size):
-    graph_data = df[(df["RPLANET"] > radius_range[0]) &
+    graph_data: Union[Union[Series, DataFrame, None, NDFrame, ndarray], Any] = df[(df["RPLANET"] > radius_range[0]) &
                     (df["RPLANET"] < radius_range[1]) &
                     (df["StarSize"].isin(star_size))
                     ]
@@ -213,25 +232,30 @@ def update_graph(n, radius_range, star_size):
                         style={"font-size": "250%", "margin-top": "40px"}), html.Div(), html.Div(), html.Div()
 
     fig1 = px.scatter(graph_data, x="TPLANET", y="A", color="StarSize")
-    html1 = [html.Div("Planet Temperature ~ Distance to the Star"), dcc.Graph(figure=fig1)]
+    fig1.update_layout(template=CHARTS_TEMPLATE)
+    html1 = [html.H5("Planet Temperature ~ Distance to the Star"), dcc.Graph(figure=fig1)]
 
-    fig2 = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET", color="status")
-    html2 = [html.Div("Position on the Celestial Sphere"), dcc.Graph(figure=fig2)]
+    fig2 = px.scatter(graph_data, x="RA", y="DEC", size="RPLANET",
+                      color="status", color_discrete_sequence=COLORS_STATUS_VALUES)
+    fig2.update_layout(template=CHARTS_TEMPLATE)
+    html2 = [html.H5("Position on the Celestial Sphere"), dcc.Graph(figure=fig2)]
 
     # как будут наложены гистрограммы
     fig3 = px.histogram(graph_data, x="Relative_dist", color="status", barmode="overlay", marginal="violin")
+    fig3.update_layout(template=CHARTS_TEMPLATE)
     fig3.add_vline(x=1, annotation_text="Earth", line_dash="dot")
-    html3 = [html.Div("Relative Distance (AU/Sol radii)"), dcc.Graph(figure=fig3)]
+    html3 = [html.H5("Relative Distance (AU/Sol radii)"), dcc.Graph(figure=fig3)]
 
-    fig4 = px.scatter(graph_data, x="MSTAR", y="TSTAR", size="RPLANET", color="status")
+    fig4 = px.scatter(graph_data, x="MSTAR", y="TSTAR", size="RPLANET",
+                      color="status", color_discrete_sequence=COLORS_STATUS_VALUES)
+    fig4.update_layout(template=CHARTS_TEMPLATE)
     html4 = [
-        html.Div("Star Mass ~ Star Temperature"),
+        html.H5("Star Mass ~ Star Temperature"),
         dcc.Graph(figure=fig4)
     ]
-
     # Raw data table
     # удаляем добавленые колонки
-    raw_data = graph_data.drop(["Relative_dist", "StarSize", "Gravity", "status", "Temp", "ROW",], axis=1)
+    raw_data = graph_data.drop(["Relative_dist", "StarSize", "Gravity", "status", "Temp", "ROW"], axis=1)
     # строим таблицу, переводим данные графика в словарь и записываем данные потом в колонки таблицы
     tbl = dash_table.DataTable(data=graph_data.to_dict("records"),
                                columns=[{"name": i, "id": i} for i in raw_data.columns],
