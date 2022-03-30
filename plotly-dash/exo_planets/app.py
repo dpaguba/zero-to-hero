@@ -22,9 +22,12 @@ from numpy import ndarray
 from pandas import Series, DataFrame
 from pandas.core.generic import NDFrame
 
+
 """ READ DATA"""
 
+
 df = pd.read_csv("asterank_exo.csv")
+
 # добавлен фильтр по данным PER, которые отвечают за показатель направления вращения планеты
 # отфильтровано так, чтобы были показаны планеты крутящиеся по часовой стрелке, а не против нее
 df = df[df["PER"] > 0]
