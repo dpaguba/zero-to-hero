@@ -203,11 +203,11 @@ app.layout = html.Div([
         html.Div([
             dbc.Row(
                 [dbc.Col([
-                    html.Div("Select planet main semi-axis range", className="selector",),
+                    html.Div("Select planet main semi-axis range", className="selector", ),
                     html.Div(rplanet_selector)
                 ], width={"size": 3, "offset": 0}),
                     dbc.Col([
-                        html.Div("Select Star size", className="selector",),
+                        html.Div("Select Star size", className="selector", ),
                         html.Div(star_size_selector)
                     ], width={"size": 3, "offset": 1}),
                     dbc.Col(dbc.Button("Apply all changes", id="btn-submit", outline=True, color="secondary",
@@ -235,11 +235,7 @@ app.layout = html.Div([
 
 
 @app.callback(
-    [Output(component_id="responsive-graph", component_property="children"),
-     Output(component_id="celestial-graph", component_property="children"),
-     Output(component_id="relative-dist-graph", component_property="children"),
-     Output(component_id="mstar-tstar-graph", component_property="children"),
-     Output(component_id="data-table", component_property="children")],
+    Output(component_id="filtered-data", component_property="data"),
     [Input(component_id="btn-submit", component_property="n_clicks")],
     [State(component_id="range-slider", component_property="value"),
      State(component_id="star-size-dropdown", component_property="value")]
@@ -249,6 +245,19 @@ def update_graph(n, radius_range, star_size):
                                                                                   (df["RPLANET"] < radius_range[1]) &
                                                                                   (df["StarSize"].isin(star_size))
                                                                                   ]
+    return graph_data.to_json(date_format="iso", orient="split", default_handler=str)
+
+
+@app.callback(
+    [Output(component_id="responsive-graph", component_property="children"),
+     Output(component_id="celestial-graph", component_property="children"),
+     Output(component_id="relative-dist-graph", component_property="children"),
+     Output(component_id="mstar-tstar-graph", component_property="children"),
+     Output(component_id="data-table", component_property="children")],
+     Input(component_id="filtered-data", component_property="data")
+)
+def update_graph(data):
+    graph_data = pd.read_json(data, orient="split")
 
     if len(graph_data) == 0:
         return html.Div("Please select more data!",
