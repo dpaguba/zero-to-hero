@@ -22,9 +22,9 @@ from numpy import ndarray
 from pandas import Series, DataFrame
 from pandas.core.generic import NDFrame
 
+from dash_iconify import DashIconify
 
 """ READ DATA"""
-
 
 df = pd.read_csv("asterank_exo.csv")
 
@@ -100,7 +100,7 @@ tab1_content = [
         dbc.Col([
             html.Div(id="responsive-graph")], md=6),
         dbc.Col([
-            html.Div(id="celestial-graph")], md=6)], style={"margin-top": "20px", "margin-bottom": "10px"}),
+            html.Div(id="celestial-graph")], md=6)], className="tabs"),
     dbc.Row([
         dbc.Col([
             html.Div(id="relative-dist-graph")
@@ -117,7 +117,6 @@ tab2_content = [
     ])
 ]
 
-
 table_header = [
     html.Thead(
         html.Tr([
@@ -128,23 +127,22 @@ table_header = [
 ]
 
 expl = {
-    "KOI":	"Object of Interest number",
-    "A":	"Semi-major axis (AU)",
-    "RPLANET":	"Planetary radius (Earth radii)",
-    "RSTAR":	"Stellar radius (Sol radii)",
-    "TSTAR":	"Effective temperature of host star as reported in KIC (k)",
-    "KMAG":	"Kepler magnitude (kmag)",
-    "TPLANET":	"Equilibrium temperature of planet, per Borucki et al. (k)",
-    "T0":	"Time of transit center (BJD-2454900)",
-    "UT0":	"Uncertainty in time of transit center (+-jd)",
-    "UT0":	"Uncertainty in time of transit center (+-jd)",
-    "PER":	"Period (days)",
-    "UPER":	"Uncertainty in period (+-days)",
-    "DEC":	"Declination (@J200)",
-    "RA":	"Right ascension (@J200)",
-    "MSTAR":	"Derived stellar mass (msol)",
+    "KOI": "Object of Interest number",
+    "A": "Semi-major axis (AU)",
+    "RPLANET": "Planetary radius (Earth radii)",
+    "RSTAR": "Stellar radius (Sol radii)",
+    "TSTAR": "Effective temperature of host star as reported in KIC (k)",
+    "KMAG": "Kepler magnitude (kmag)",
+    "TPLANET": "Equilibrium temperature of planet, per Borucki et al. (k)",
+    "T0": "Time of transit center (BJD-2454900)",
+    "UT0": "Uncertainty in time of transit center (+-jd)",
+    "UT0": "Uncertainty in time of transit center (+-jd)",
+    "PER": "Period (days)",
+    "UPER": "Uncertainty in period (+-days)",
+    "DEC": "Declination (@J200)",
+    "RA": "Right ascension (@J200)",
+    "MSTAR": "Derived stellar mass (msol)",
 }
-
 
 tbl_rows = []
 for i in expl:
@@ -158,8 +156,8 @@ text = "Data are sourced from Kepler API via asterank.com"
 tab3_content = [
     dbc.Row([
         html.A(text, href="https://www.asterank.com/kepler")
-    ], style={"margin-top": "20px"}),
-    dbc.Row(html.Div(children=table), style={"margin-top": "20px"}),
+    ], className="tabs"),
+    dbc.Row(html.Div(children=table), className="tabs"),
 
 ]
 
@@ -184,32 +182,54 @@ app = dash.Dash(__name__,
 
 """ LAYOUT """
 
-app.layout = html.Div(
-    [
-        dbc.Row(dbc.Col(html.H1("Kepler Project"),
-                        style={"text-align": "center", "margin-top": "10px", "margin-bottom": "20px"})),
-        dbc.Row(
-            [dbc.Col([
-                html.Div("Select planet main semi-axis range"),
-                html.Div(rplanet_selector)
-            ], width={"size": 3, "offset": 0}),
-                dbc.Col([
-                    html.Div("Select Star size"),
-                    html.Div(star_size_selector)
-                ], width={"size": 3, "offset": 1}),
-                dbc.Col(dbc.Button("Apply", id="btn-submit", color="success", className='me-1', n_clicks=0))
-            ],
-            style={"margin-top": "10px", "margin-bottom": "20px"}
-        ),
-        dbc.Tabs([
-            dbc.Tab(tab1_content, label="Charts"),
-            dbc.Tab(tab2_content, label="Data"),
-            dbc.Tab(tab3_content, label="About")
+app.layout = html.Div([
+    # Header
+    html.Header(
+        dbc.Row([
+            dbc.Col(
+                html.Img(src=app.get_asset_url("images/satellite.png"),
+                         style={"width": "200px"}), width={"size": 2, "offset": 0}
+            ),
+            dbc.Col([
+                html.H1("Exoplanet Data Visualization"),
+                html.A("Read about exoplanets", href="https://spaceplace.nasa.gov/all-about-exoplanets/en/")
+            ], width={"size": 7, "offset": 0})
+        ], className="app-header"), className="app-sticky"),
+
+    dcc.Store(id="filtered-data", storage_type="session"),
+
+    # Body
+    html.Main(
+        html.Div([
+            dbc.Row(
+                [dbc.Col([
+                    html.Div("Select planet main semi-axis range", className="selector",),
+                    html.Div(rplanet_selector)
+                ], width={"size": 3, "offset": 0}),
+                    dbc.Col([
+                        html.Div("Select Star size", className="selector",),
+                        html.Div(star_size_selector)
+                    ], width={"size": 3, "offset": 1}),
+                    dbc.Col(dbc.Button("Apply all changes", id="btn-submit", outline=True, color="secondary",
+                                       className="me-1", n_clicks=0), className="btn")
+                ],
+                className="main-selectors",
+            ),
+            dbc.Tabs([
+                dbc.Tab(tab1_content, label="Charts"),
+                dbc.Tab(tab2_content, label="Data"),
+                dbc.Tab(tab3_content, label="About")
+            ])
         ])
-    ], style={"margin-left": "80px",
-              "margin-right": "80px",
-              "text-align": "center"}
-)
+    ),
+
+    html.Footer(
+        dbc.Col([
+            html.A(DashIconify(icon="ion:logo-github", width=30, ), href="https://github.com/dpaguba"),
+            html.A("dpaguba", href="https://github.com/dpaguba")
+        ], className="app-footer")
+    )
+])
 
 """ CALLBACKS """
 
@@ -226,9 +246,9 @@ app.layout = html.Div(
 )
 def update_graph(n, radius_range, star_size):
     graph_data: Union[Union[Series, DataFrame, None, NDFrame, ndarray], Any] = df[(df["RPLANET"] > radius_range[0]) &
-                    (df["RPLANET"] < radius_range[1]) &
-                    (df["StarSize"].isin(star_size))
-                    ]
+                                                                                  (df["RPLANET"] < radius_range[1]) &
+                                                                                  (df["StarSize"].isin(star_size))
+                                                                                  ]
 
     if len(graph_data) == 0:
         return html.Div("Please select more data!",
